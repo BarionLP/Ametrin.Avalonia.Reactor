@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Ametrin.Avalonia.Reactor\Ametrin.Avalonia.Reactor.csproj" />
+    <ProjectReference Include="../../src/Ametrin.Avalonia.Reactor/Ametrin.Avalonia.Reactor.csproj" />
   </ItemGroup>
 
 </Project>
