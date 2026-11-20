@@ -6,8 +6,6 @@ namespace Ametrin.Avalonia.Reactor;
 
 internal static class Reconciler
 {
-    private static readonly List<PropValue> NoProps = [];
-
     public static Node Reconcile(Node? old, Element next, Node parent)
     {
         if (old is not null && CanReuse(old.Element, next))
@@ -105,7 +103,8 @@ internal static class Reconciler
         {
             case ControlElement control:
                 node.OwnControl = control.Create();
-                UpdateProps(node.OwnControl, NoProps, control);
+                UpdateProps(node.OwnControl, null, control);
+                UpdatePlainProps(node.OwnControl, null, control.PlainProps);
                 UpdateEvents(node, control);
                 UpdatePropertyHandlers(node, control);
                 ReconcileChildren(node, control.ChildElements);
@@ -135,7 +134,9 @@ internal static class Reconciler
         switch (next)
         {
             case ControlElement control:
-                UpdateProps(node.OwnControl!, ((ControlElement)previous).Props, control);
+                var old = (ControlElement)previous;
+                UpdateProps(node.OwnControl!, old.Props, control);
+                UpdatePlainProps(node.OwnControl!, old.PlainProps, control.PlainProps);
                 UpdateEvents(node, control);
                 UpdatePropertyHandlers(node, control);
                 ReconcileChildren(node, control.ChildElements);
@@ -152,7 +153,7 @@ internal static class Reconciler
     }
 
     // Controlled props compare against the live value because the control may have changed it since the last render.
-    private static void UpdateProps(Control control, List<PropValue> previous, ControlElement next)
+    private static void UpdateProps(Control control, List<PropValue<AvaloniaProperty>>? previous, ControlElement next)
     {
         foreach (var (property, value) in next.Props)
         {
@@ -160,17 +161,31 @@ internal static class Reconciler
             var changed = controlled ? !Equals(control.GetValue(property), value) : !TryFind(previous, property, out var old) || !Equals(old, value);
             if (changed) control.SetValue(property, value);
         }
+        if (previous is null) return;
         foreach (var (property, _) in previous)
             if (!TryFind(next.Props, property, out _)) control.ClearValue(property);
     }
 
-    private static bool TryFind(List<PropValue> props, AvaloniaProperty property, out object? value)
+    private static void UpdatePlainProps(Control control, List<PropValue<PlainProperty>>? previous, List<PropValue<PlainProperty>>? next)
     {
-        foreach (var prop in props)
+        if (next is not null)
+            foreach (var (property, value) in next)
+                if (!TryFind(previous, property, out var old) || !Equals(old, value)) property.Apply(control, value);
+        if (previous is not null)
+            foreach (var (property, _) in previous)
+                if (!TryFind(next, property, out _)) property.Reset(control);
+    }
+
+    private static bool TryFind<TProperty>(List<PropValue<TProperty>>? props, TProperty property, out object? value) where TProperty : class
+    {
+        if (props is not null)
         {
-            if (prop.Property != property) continue;
-            value = prop.Value;
-            return true;
+            foreach (var prop in props)
+            {
+                if (prop.Property != property) continue;
+                value = prop.Value;
+                return true;
+            }
         }
         value = null;
         return false;

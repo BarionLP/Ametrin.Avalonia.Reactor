@@ -9,19 +9,20 @@ namespace ReactorTests;
 public sealed class ReconcilerTests
 {
     [Test]
-    public async Task RemovedPropIsClearedInsteadOfDefaulted()
+    public async Task PropsAreAppliedOnlyWhenChangedAndClearedWhenRemoved()
     {
-        var (widthBefore, isSetAfter) = await Ui.Run(() =>
+        var result = await Ui.Run(() =>
         {
-            var host = Ui.Mount(Border().Width(100));
-            var border = (Border)host.Child!;
-            var before = border.Width;
-            host.Render(Border());
-            return (before, border.IsSet(Layoutable.WidthProperty));
+            var host = Ui.Mount(Grid().Width(100).RowDefinitions("Auto,*"));
+            var grid = (Grid)host.Child!;
+            var (width, rows) = (grid.Width, grid.RowDefinitions);
+            host.Render(Grid().RowDefinitions("Auto,*"));
+            var (widthSet, rowsKept) = (grid.IsSet(Layoutable.WidthProperty), ReferenceEquals(rows, grid.RowDefinitions));
+            host.Render(Grid());
+            return (width, rows.Count, widthSet, rowsKept, grid.RowDefinitions.Count);
         });
 
-        await Assert.That(widthBefore).IsEqualTo(100);
-        await Assert.That(isSetAfter).IsFalse();
+        await Assert.That(result).IsEqualTo((100d, 2, false, true, 0));
     }
 
     [Test]
