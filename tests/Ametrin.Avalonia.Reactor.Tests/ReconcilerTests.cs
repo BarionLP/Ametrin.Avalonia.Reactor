@@ -13,16 +13,16 @@ public sealed class ReconcilerTests
     {
         var result = await Ui.Run(() =>
         {
-            var host = Ui.Mount(Grid().Width(100).RowDefinitions("Auto,*"));
+            var host = Ui.Mount(Grid().Width(100).RowDefinitions("Auto,*").Classes("card selected"));
             var grid = (Grid)host.Child!;
-            var (width, rows) = (grid.Width, grid.RowDefinitions);
-            host.Render(Grid().RowDefinitions("Auto,*"));
-            var (widthSet, rowsKept) = (grid.IsSet(Layoutable.WidthProperty), ReferenceEquals(rows, grid.RowDefinitions));
+            var (width, rows, classes) = (grid.Width, grid.RowDefinitions, string.Join(" ", grid.Classes));
+            host.Render(Grid().RowDefinitions("Auto,*").Classes("card"));
+            var (widthSet, rowsKept, changedClasses) = (grid.IsSet(Layoutable.WidthProperty), ReferenceEquals(rows, grid.RowDefinitions), string.Join(" ", grid.Classes));
             host.Render(Grid());
-            return (width, rows.Count, widthSet, rowsKept, grid.RowDefinitions.Count);
+            return (width, rows.Count, classes, widthSet, rowsKept, changedClasses, grid.RowDefinitions.Count, grid.Classes.Count);
         });
 
-        await Assert.That(result).IsEqualTo((100d, 2, false, true, 0));
+        await Assert.That(result).IsEqualTo((100d, 2, "card selected", false, true, "card", 0, 0));
     }
 
     [Test]
